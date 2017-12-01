@@ -7,5 +7,6 @@
 void main(void)
 {
 	WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;		// stop watchdog timer
-	//probando control de versión 2
+	// Probando control de versión 2
+	// Test de sincronismo
 }

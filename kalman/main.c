@@ -45,8 +45,8 @@ void main(void)
     }
 }
 
-// ADC15 interrupt service routine
-void ADC15_IRQHandler(void) {
+// ADC14 interrupt service routine
+void ADC14_IRQHandler(void) {
     if (ADC14->MEM[0] >= 0x7FF)             // ADC14MEM0 = A1 > 0.5AVcc?
       P1->OUT |= BIT0;                      // P1.0 = 1
     else

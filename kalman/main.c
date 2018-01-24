@@ -1,6 +1,10 @@
 #include "msp.h"
 #include "stdint.h"
 
+
+// Ubuntu app => sudo gtkterm
+// Port => ttyACM0
+
 /**
  * main.c
  */
@@ -9,15 +13,55 @@ void main(void)
 {
     volatile unsigned int i;
 
-	WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;     // Stop watchdog
+	WDT_A->CTL = WDT_A_CTL_PW
+	        | WDT_A_CTL_HOLD;               // Stop watchdog timer
 
+	// Clock setup
+    CS->KEY = CS_KEY_VAL;                   // Unlock CS module for register access
+    CS->CTL0 = 0;                           // Reset tuning parameters
+    CS->CTL0 = CS_CTL0_DCORSEL_3;           // Set DCO to 12MHz (nominal, center of 8-16MHz range)
+    CS->CTL1 = CS_CTL1_SELA_2 |             // Select ACLK = REFO
+            CS_CTL1_SELS_3 |                // SMCLK = DCO
+            CS_CTL1_SELM_3;                 // MCLK = DCO
+    CS->KEY = 0;                            // Lock CS module from unintended accesses
 
-	// TI example to test launchpad board
-    // GPIO Setup
+    // Configure GPIO
     P1->OUT &= ~BIT0;                       // Clear LED1 to start
     P1->DIR |= BIT0;                        // Set P1.0/LED1 to output
-    P6->SEL1 |= BIT0;                       // Configure P6.0 for ADC
+    P2->OUT &= ~(BIT0|BIT1|BIT2);           // Clear LED2 to start
+    P2->DIR |= BIT0|BIT1|BIT2;              // Set P2.0-2/LED2 to output
+
+    // Configure ADC pins
+    P6->SEL1 |= BIT0;                       // Set P6.0 for ADC
     P6->SEL0 |= BIT0;
+
+    // Configure UART pins
+    P1->SEL0 |= BIT2 | BIT3;                // Set 2-UART pin as secondary function
+
+    // Configure UART
+    EUSCI_A0->CTLW0 |= EUSCI_A_CTLW0_SWRST; // Put eUSCI in reset
+    EUSCI_A0->CTLW0 = EUSCI_A_CTLW0_SWRST | // Remain eUSCI in reset
+            EUSCI_B_CTLW0_SSEL__SMCLK;      // Configure eUSCI clock source for SMCLK
+    // Baud Rate calculation
+    // 12000000/(16*9600) = 78.125
+    // Fractional portion = 0.125
+    // User's Guide Table 21-4: UCBRSx = 0x10
+    // UCBRFx = int ( (78.125-78)*16) = 2
+    EUSCI_A0->BRW = 78;                     // 12000000/16/9600
+    EUSCI_A0->MCTLW = (2 << EUSCI_A_MCTLW_BRF_OFS) |
+            EUSCI_A_MCTLW_OS16;
+
+    EUSCI_A0->CTLW0 &= ~EUSCI_A_CTLW0_SWRST;// Initialize eUSCI
+    EUSCI_A0->IFG &= ~EUSCI_A_IFG_RXIFG;    // Clear eUSCI RX interrupt flag
+    EUSCI_A0->IE |= EUSCI_A_IE_RXIE;        // Enable USCI_A0 RX interrupt
+
+    // Configure ADC
+    ADC14->CTL0 = ADC14_CTL0_SHT0_2 |
+            ADC14_CTL0_SHP | ADC14_CTL0_ON; // Sampling time, S&H=16, ADC14 on
+    ADC14->CTL1 = ADC14_CTL1_RES_2;         // Use sampling timer, 12-bit conversion results
+
+    ADC14->MCTL[0] |= ADC14_MCTLN_INCH_15;  // A15 ADC input select; Vref=AVCC
+    ADC14->IER0 |= ADC14_IER0_IE0;          // Enable ADC conversion complete interrupt
 
     // Enable global interrupt
     __enable_irq();
@@ -25,23 +69,21 @@ void main(void)
     // Enable ADC interrupt in NVIC module
     NVIC->ISER[0] = 1 << ((ADC14_IRQn) & 31);
 
-    // Sampling time, S&H=16, ADC14 on
-    ADC14->CTL0 = ADC14_CTL0_SHT0_2 | ADC14_CTL0_SHP | ADC14_CTL0_ON;
-    ADC14->CTL1 = ADC14_CTL1_RES_2;         // Use sampling timer, 12-bit conversion results
+    // Enable eUSCIA0 interrupt in NVIC module
+    NVIC->ISER[0] = 1 << ((EUSCIA0_IRQn) & 31);
 
-    ADC14->MCTL[0] |= ADC14_MCTLN_INCH_15;   // A15 ADC input select; Vref=AVCC
-    ADC14->IER0 |= ADC14_IER0_IE0;          // Enable ADC conversion complete interrupt
-
-    SCB->SCR &= ~SCB_SCR_SLEEPONEXIT_Msk;   // Wake up on exit from ISR
+    // Say "HI"
+    EUSCI_A0->TXBUF = 'H';
+    EUSCI_A0->TXBUF = 'I';
 
     while (1)
     {
-        for (i = 20000; i > 0; i--);        // Delay
+        for (i = 0xFFFF; i > 0; i--);       // Delay
+
+        P2->OUT ^= BIT0;                    // Blink P2.0 LED
 
         // Start sampling/conversion
         ADC14->CTL0 |= ADC14_CTL0_ENC | ADC14_CTL0_SC;
-        __sleep();
-
     }
 }
 
@@ -51,4 +93,19 @@ void ADC14_IRQHandler(void) {
       P1->OUT |= BIT0;                      // P1.0 = 1
     else
       P1->OUT &= ~BIT0;                     // P1.0 = 0
+}
+
+// UART interrupt service routine
+void EUSCIA0_IRQHandler(void)
+{
+    if (EUSCI_A0->IFG & EUSCI_A_IFG_RXIFG)
+    {
+        // Check if the TX buffer is empty first
+        while(!(EUSCI_A0->IFG & EUSCI_A_IFG_TXIFG));
+
+        // Echo the received character back
+        EUSCI_A0->TXBUF = EUSCI_A0->RXBUF;
+
+        P2->OUT ^= BIT1;                    // Blink P2.1 LED
+    }
 }

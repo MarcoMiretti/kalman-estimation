@@ -2,6 +2,7 @@
 #define INIT
 #include "msp.h"
 #include "stdint.h"
+#include "usci.h"
 #endif
 
 #define TRUE    1
@@ -14,7 +15,7 @@
 /**
  * main.c
  */
-
+void vInitUSCI(void);
 void main(void)
 {
     volatile unsigned int i;

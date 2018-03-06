@@ -15,7 +15,7 @@
 /**
  * main.c
  */
-void vInitUSCI(void);
+
 void main(void)
 {
     volatile unsigned int i;

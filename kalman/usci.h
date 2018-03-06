@@ -18,7 +18,4 @@ void vSendStringUSART(const char *cString);
 
 void EUSCIA0_IRQHandler(void);
 
-
-
-
 #endif /* USCI_H_ */

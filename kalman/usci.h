@@ -1,9 +1,8 @@
-/*
- * usci.h
- *
- *  Created on: 5 mar. 2018
- *      Author: emanuel
- */
+/*************************************
+ * File: usci.h                      *
+ * Authors: GIDE - UTN San Francisco *
+ * Project: Gimbal                   *
+ *************************************/
 
 #ifndef USCI_H_
 #define USCI_H_

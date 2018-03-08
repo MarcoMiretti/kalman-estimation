@@ -1,8 +1,10 @@
-#ifndef INIT
-#define INIT
-#include "msp.h"
-#include "stdint.h"
-#endif
+/*************************************
+ * File: adc.c                       *
+ * Authors: GIDE - UTN San Francisco *
+ * Project: Gimbal                   *
+ *************************************/
+
+#include "main.h"
 
 // ADC Initialization
 void vInitADC(void)
@@ -19,6 +21,25 @@ void vInitADC(void)
     ADC14->MCTL[0] |= ADC14_MCTLN_INCH_15;  // A15 ADC input select; Vref=AVCC
     ADC14->IER0 |= ADC14_IER0_IE0;          // Enable ADC conversion complete interrupt
 
+    // Enable ADC interrupt in NVIC module
+    NVIC->ISER[0] = 1 << ((ADC14_IRQn) & 31);
+
+}
+
+void vStartADC(void)
+{
+    // Start sampling/conversion
+    ADC14->CTL0 |= ADC14_CTL0_ENC | ADC14_CTL0_SC;
+}
+
+unsigned int iReadADC(void)
+{
+    vStartADC();
+
+    // Wait for conversion to complete
+    while (!ADC14->IFGR0);
+
+    return(ADC14->MEM[0]);
 }
 
 // ADC14 interrupt service routine

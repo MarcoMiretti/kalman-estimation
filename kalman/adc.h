@@ -1,14 +1,17 @@
-/*
- * adc.h
- *
- *  Created on: 6 mar. 2018
- *      Author: marco
- */
+/*************************************
+ * File: adc.h                       *
+ * Authors: GIDE - UTN San Francisco *
+ * Project: Gimbal                   *
+ *************************************/
 
 #ifndef ADC_H_
 #define ADC_H_
 
 void vInitADC(void);
+
+void vStartADC(void);
+
+unsigned int iReadADC(void);
 
 void ADC14_IRQHandler(void);
 

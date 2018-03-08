@@ -1,20 +1,13 @@
-#ifndef INIT
-#define INIT
-#include "msp.h"
-#include "stdint.h"
-#include "usci.h"
-#endif
-
-#define TRUE    1
-#define FALSE   0
-#define ERROR   -1
+/*************************************
+ * File: main.c                      *
+ * Authors: GIDE - UTN San Francisco *
+ * Project: Gimbal                   *
+ *************************************/
 
 // Ubuntu app => sudo gtkterm
-// Port => ttyACM0
+// Port => ttyACMx
 
-/**
- * main.c
- */
+#include "main.h"
 
 void main(void)
 {
@@ -44,12 +37,6 @@ void main(void)
     // Enable global interrupt
     __enable_irq();
 
-    // Enable ADC interrupt in NVIC module
-    NVIC->ISER[0] = 1 << ((ADC14_IRQn) & 31);
-
-    // Enable eUSCIA0 interrupt in NVIC module
-    NVIC->ISER[0] = 1 << ((EUSCIA0_IRQn) & 31);
-
     // Say "HI"
     vSendByte('H');
     vSendByte('I');
@@ -60,7 +47,8 @@ void main(void)
 
         P2->OUT ^= BIT0;                    // Blink P2.0 LED
 
-        // Start sampling/conversion
-        ADC14->CTL0 |= ADC14_CTL0_ENC | ADC14_CTL0_SC;
+        vStartADC();
+
+        //vSendByte(iReadADC());
     }
 }

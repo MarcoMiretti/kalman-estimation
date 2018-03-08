@@ -1,8 +1,10 @@
-#ifndef INIT
-#define INIT
-#include "msp.h"
-#include "stdint.h"
-#endif
+/*************************************
+ * File: usci.c                      *
+ * Authors: GIDE - UTN San Francisco *
+ * Project: Gimbal                   *
+ *************************************/
+
+#include "main.h"
 
 // USCI Initialization
 void vInitUSCI(void)
@@ -26,6 +28,9 @@ void vInitUSCI(void)
     EUSCI_A0->CTLW0 &= ~EUSCI_A_CTLW0_SWRST;// Initialize eUSCI
     EUSCI_A0->IFG &= ~EUSCI_A_IFG_RXIFG;    // Clear eUSCI RX interrupt flag
     EUSCI_A0->IE |= EUSCI_A_IE_RXIE;        // Enable USCI_A0 RX interrupt
+
+    // Enable eUSCIA0 interrupt in NVIC module
+    NVIC->ISER[0] = 1 << ((EUSCIA0_IRQn) & 31);
 }
 
 // USART Transmission

@@ -7,6 +7,8 @@
 #ifndef USCI_H_
 #define USCI_H_
 
+#include "main.h"
+
 void vInitUSCI(void);
 
 void vSendByte(unsigned char cByte);

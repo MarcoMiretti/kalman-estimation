@@ -4,7 +4,7 @@
  * Project: Gimbal                   *
  *************************************/
 
-#include "main.h"
+#include "usci.h"
 
 // USCI Initialization
 void vInitUSCI(void)

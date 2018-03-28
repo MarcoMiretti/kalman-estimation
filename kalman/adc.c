@@ -4,7 +4,7 @@
  * Project: Gimbal                   *
  *************************************/
 
-#include "main.h"
+#include "adc.h"
 
 // ADC Initialization
 void vInitADC(void)

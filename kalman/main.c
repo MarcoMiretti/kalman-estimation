@@ -4,14 +4,14 @@
  * Project: Gimbal                   *
  *************************************/
 
-// Ubuntu app => sudo gtkterm
-// Port => ttyACMx
-
 #include "main.h"
+
+char I2C_STATE = I2C_OFF, cIndexRX, cData[MAX_RX_BYTES], cTmpData[5];
+float fTmp;
 
 void main(void)
 {
-    volatile unsigned int i;
+    int i, iTmp;
 
 	WDT_A->CTL = WDT_A_CTL_PW
 	        | WDT_A_CTL_HOLD;               // Stop watchdog timer
@@ -33,13 +33,18 @@ void main(void)
 
     vInitUSCI();                            // Calls USCI Init routine
     vInitADC();                             // Calls ADC Init routine
+    vInitEUSCI();                           // Calls eUSCI Init routine
 
     // Enable global interrupt
     __enable_irq();
 
+
     // Say "HI"
     vSendByte('H');
     vSendByte('I');
+    vSendByte(0x0D);
+
+    i = iInitMPU6050();
 
     while (1)
     {
@@ -47,8 +52,44 @@ void main(void)
 
         P2->OUT ^= BIT0;                    // Blink P2.0 LED
 
-        vStartADC();
+/*        vStartADC();
 
-        //vSendByte(iReadADC());
+        if (iReadBytesI2C(MPU6050_WHO_AM_I, 1) == ERROR)
+            vSendByte(0x05);
+        else
+            vSendByte(cData[0]);
+*/
+        if (iReadBytesI2C(MPU6050_TEMP_OUT_H, 2) == ERROR)
+            vSendByte(0x05);
+        else
+        {
+            vSendStringUSART("T: ");
+            vSendByte(cData[0]);
+            vSendByte(cData[1]);
+        }
+
+        if (iReadBytesI2C(MPU6050_ACCEL_XOUT_H, 6) == ERROR)
+            vSendByte(0x05);
+        else
+        {
+            iTmp = (cData[0]<<8) + cData[1];
+            ltoa(iTmp, cTmpData);
+
+            vSendStringUSART(" X: ");
+            vSendStringUSART(cTmpData);
+
+            iTmp = (cData[2]<<8) + cData[3];
+            ltoa(iTmp, cTmpData);
+
+            vSendStringUSART(" Y: ");
+            vSendStringUSART(cTmpData);
+
+            iTmp = (cData[4]<<8) + cData[5];
+            ltoa(iTmp, cTmpData);
+
+            vSendStringUSART(" Z: ");
+            vSendStringUSART(cTmpData);
+            vSendStringUSART("\r\n");
+        }
     }
 }

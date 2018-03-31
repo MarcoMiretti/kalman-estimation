@@ -4,14 +4,26 @@
  * Project: Gimbal                   *
  *************************************/
 
+// PWM Motor 1
+// P2.4 - TA0.1
+// P2.6 - TA0.3
+// P2.7 - TA0.4
+
+// PWM Motor 2
+// P5.6 - TA2.1
+// P6.6 - TA2.3
+// P6.7 - TA2.4
+
 #include "main.h"
 
-char I2C_STATE = I2C_OFF, cIndexRX, cData[MAX_RX_BYTES], cTmpData[5];
-float fTmp;
+char TIMER_STATE = FALSE, I2C_STATE = I2C_OFF, cIndexRX, cData[10];
+int8_t iData[MAX_RX_BYTES];
 
+// Main loop
 void main(void)
 {
-    int i, iTmp;
+    int iTmp, count = 0;
+    float fTmp;
 
 	WDT_A->CTL = WDT_A_CTL_PW
 	        | WDT_A_CTL_HOLD;               // Stop watchdog timer
@@ -31,65 +43,114 @@ void main(void)
     P2->OUT &= ~(BIT0|BIT1|BIT2);           // Clear LED2 to start
     P2->DIR |= BIT0|BIT1|BIT2;              // Set P2.0-2/LED2 to output
 
-    vInitUSCI();                            // Calls USCI Init routine
-    vInitADC();                             // Calls ADC Init routine
-    vInitEUSCI();                           // Calls eUSCI Init routine
+    // Timer32 set up in periodic mode, 32-bit, no pre-scale
+    TIMER32_1->CONTROL = TIMER32_CONTROL_SIZE |
+            TIMER32_CONTROL_MODE;
+
+    // Load Timer32 counter with period = 0x2DC6C0 (one time per second)
+    TIMER32_1->LOAD = 0x2DC6C0;
+
+    // Enable the Timer32 interrupt in NVIC
+    NVIC->ISER[0] = 1 << ((T32_INT1_IRQn) & 31);
+
+    // Start Timer32 with interrupt enabled
+    TIMER32_1->CONTROL |= TIMER32_CONTROL_ENABLE |
+            TIMER32_CONTROL_IE;
+
+    vInitUSCI();                            // Calls USCI Initialization routine
+    vSendStringUSART("USART initialized...\r\n");
+
+    vInitADC();                             // Calls ADC Initialization routine
+    vSendStringUSART("ADC initialized...\r\n");
+
+    vInitEUSCI();                           // Calls eUSCI Initialization routine
+    vSendStringUSART("I2C initialized...\r\n");
 
     // Enable global interrupt
     __enable_irq();
 
+    if(iInitMPU6050() == ERROR)
+        vSendStringUSART("Error initializing MPU6050\r\n");
+    else
+        vSendStringUSART("MPU6050 initialized...\r\n");
 
-    // Say "HI"
-    vSendByte('H');
-    vSendByte('I');
-    vSendByte(0x0D);
+    // Labels
+    vSendStringUSART("Time, Temp, AX, AY, AZ, GX, GY, GZ\r\n");
 
-    i = iInitMPU6050();
-
-    while (1)
+    while (TRUE)
     {
-        for (i = 0xFFFF; i > 0; i--);       // Delay
-
-        P2->OUT ^= BIT0;                    // Blink P2.0 LED
-
-/*        vStartADC();
-
-        if (iReadBytesI2C(MPU6050_WHO_AM_I, 1) == ERROR)
-            vSendByte(0x05);
-        else
-            vSendByte(cData[0]);
-*/
-        if (iReadBytesI2C(MPU6050_TEMP_OUT_H, 2) == ERROR)
-            vSendByte(0x05);
-        else
+        if (TIMER_STATE)
         {
-            vSendStringUSART("T: ");
-            vSendByte(cData[0]);
-            vSendByte(cData[1]);
-        }
+            TIMER_STATE = FALSE;
+            P2->OUT ^= BIT0;                    // Blink P2.0 LED
 
-        if (iReadBytesI2C(MPU6050_ACCEL_XOUT_H, 6) == ERROR)
-            vSendByte(0x05);
-        else
-        {
-            iTmp = (cData[0]<<8) + cData[1];
-            ltoa(iTmp, cTmpData);
+            count++;
+            intToStr(count, cData, 4);
+            vSendStringUSART(cData);
 
-            vSendStringUSART(" X: ");
-            vSendStringUSART(cTmpData);
+    //        vStartADC();
 
-            iTmp = (cData[2]<<8) + cData[3];
-            ltoa(iTmp, cTmpData);
+            if (iReadBytesI2C(MPU6050_ACCEL_XOUT_H, 14) != ERROR)
+            {
+                fTmp = (iData[6]<<8) + iData[7];    // Temperature
+                fTmp = fTmp/340.0f + 36.53f;
+                ftoa(fTmp, cData, 2);
+                vSendStringUSART(", ");
+                vSendStringUSART(cData);
 
-            vSendStringUSART(" Y: ");
-            vSendStringUSART(cTmpData);
+                fTmp = (iData[0]<<8) + iData[1];    // Acceleration X
+                fTmp = fTmp/16384.f;
+                ftoa(fTmp, cData, 3);
+                vSendStringUSART(", ");
+                vSendStringUSART(cData);
 
-            iTmp = (cData[4]<<8) + cData[5];
-            ltoa(iTmp, cTmpData);
+                fTmp = (iData[2]<<8) + iData[3];    // Acceleration Y
+                fTmp = fTmp/16384.f;
+                ftoa(fTmp, cData, 3);
+                vSendStringUSART(", ");
+                vSendStringUSART(cData);
 
-            vSendStringUSART(" Z: ");
-            vSendStringUSART(cTmpData);
-            vSendStringUSART("\r\n");
+                fTmp = (iData[4]<<8) + iData[5];    // Acceleration Z
+                fTmp = fTmp/16384.f;
+                ftoa(fTmp, cData, 3);
+                vSendStringUSART(", ");
+                vSendStringUSART(cData);
+
+                iTmp = (iData[8]<<8) + iData[9];    // Gyroscope X
+                iTmp = ~(iTmp - 1);
+                fTmp = iTmp/131.f;
+                fTmp -= 1.5464f;
+                ftoa(fTmp, cData, 3);
+                vSendStringUSART(", ");
+                vSendStringUSART(cData);
+
+                iTmp = (iData[10]<<8) + iData[11];  // Gyroscope Y
+                iTmp = ~(iTmp - 1);
+                fTmp = iTmp/131.f;
+                fTmp -= 2.2377f;
+                ftoa(fTmp, cData, 3);
+                vSendStringUSART(", ");
+                vSendStringUSART(cData);
+
+                iTmp = (iData[12]<<8) + iData[13];  // Gyroscope Z
+                iTmp = ~(iTmp - 1);
+                fTmp = iTmp/131.f;
+                fTmp += 0.7158f;
+                ftoa(fTmp, cData, 3);
+                vSendStringUSART(", ");
+                vSendStringUSART(cData);
+                vSendStringUSART("\r\n");
+            }
+            else
+                vSendStringUSART("Error reading MPU6050\r\n");
         }
     }
+}
+
+void T32_INT1_IRQHandler(void)
+{
+    TIMER32_1->INTCLR |= BIT0;          // Clear Timer32 interrupt flag
+    P2->OUT ^= BIT1;                    // Blink P2.1 LED
+
+    TIMER_STATE = TRUE;
 }

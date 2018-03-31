@@ -12,7 +12,7 @@
 // MPU6050 address
 #define MPU6050_ADDRESS     0x68
 #define MAX_I2C_WAIT        0xFF
-#define MAX_RX_BYTES        10
+#define MAX_RX_BYTES        0x0F
 
 // MPU6050 register table
 #define MPU6050_XG_OFFS_TC       0x00
@@ -133,7 +133,9 @@
 void vInitEUSCI(void);
 
 int iInitMPU6050(void);
+
 int iReadBytesI2C(unsigned char cAddress, unsigned char cSize);
+
 int iWriteByteI2C(unsigned char cAddress, unsigned char cData);
 
 void EUSCIB1_IRQHandler(void);

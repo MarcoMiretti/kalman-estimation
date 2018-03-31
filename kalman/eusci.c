@@ -6,7 +6,8 @@
 
 #include "eusci.h"
 
-extern char I2C_STATE, cIndexRX, cData[MAX_RX_BYTES];
+extern char I2C_STATE, cIndexRX;
+extern int8_t iData[MAX_RX_BYTES];
 char cNumDataRX;
 
 // eUSCI Initialization
@@ -135,7 +136,7 @@ int iReadBytesI2C(unsigned char cAddress, unsigned char cSize)
     while ((EUSCI_B1->CTLW0 & EUSCI_B_CTLW0_TXSTP) && --cWaitI2C);
     if (!cWaitI2C)
         return ERROR;
-    cData[cIndexRX++] = EUSCI_B1->RXBUF;
+    iData[cIndexRX++] = EUSCI_B1->RXBUF;
 
     return ACK;
 }
@@ -183,8 +184,6 @@ int iInitMPU6050(void)
 // I2C interrupt service routine
 void EUSCIB1_IRQHandler(void)
 {
-    P2->OUT ^= BIT1;                    // Blink P2.1 LED
-
     if (EUSCI_B1->IFG & EUSCI_B_IFG_TXIFG0)
     {
         I2C_STATE = I2C_TX_INT;
@@ -194,7 +193,7 @@ void EUSCIB1_IRQHandler(void)
     else if (EUSCI_B1->IFG & EUSCI_B_IFG_RXIFG0)
     {
         if (cIndexRX < cNumDataRX - 2)
-            cData[cIndexRX++] = EUSCI_B1->RXBUF;
+            iData[cIndexRX++] = EUSCI_B1->RXBUF;
         else
         {
             if (I2C_STATE != I2C_RX_INT)
@@ -202,7 +201,7 @@ void EUSCIB1_IRQHandler(void)
                 I2C_STATE = I2C_RX_INT;
                 // I2C stop condition
                 EUSCI_B1->CTLW0 |= EUSCI_B_CTLW0_TXSTP;
-                cData[cIndexRX++] = EUSCI_B1->RXBUF;
+                iData[cIndexRX++] = EUSCI_B1->RXBUF;
             }
             EUSCI_B1->IFG &= ~EUSCI_B_IFG_RXIFG0;
             EUSCI_B1->IFG &= ~EUSCI_B_IFG_RXIFG;

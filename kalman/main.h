@@ -8,11 +8,13 @@
 #define MAIN_H
 
 #include "msp.h"
-#include <stdint.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
+//#include <stdint.h>
+//#include <stdio.h>
+//#include <stdbool.h>
+//#include <string.h>
 #include <stdlib.h>
+#include <math.h>
+#include "ftoa.h"
 #include "eusci.h"
 #include "usci.h"
 #include "adc.h"

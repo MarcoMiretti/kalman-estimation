@@ -9,6 +9,18 @@
 
 #include "main.h"
 
+// USART Debug Interface
+void vInitDebugUSCI(void);
+
+void vSendDebugByte(unsigned char cByte);
+
+unsigned char cReceiveDebugByte(void);
+
+void vSendStringDebugUSART(const char *cString);
+
+void EUSCIA0_IRQHandler(void);
+
+// USART Interface
 void vInitUSCI(void);
 
 void vSendByte(unsigned char cByte);
@@ -17,6 +29,6 @@ unsigned char cReceiveByte(void);
 
 void vSendStringUSART(const char *cString);
 
-void EUSCIA0_IRQHandler(void);
+void EUSCIA2_IRQHandler(void);
 
 #endif /* USCI_H_ */

@@ -47,8 +47,9 @@ void main(void)
     TIMER32_1->CONTROL = TIMER32_CONTROL_SIZE |
             TIMER32_CONTROL_MODE;
 
-    // Load Timer32 counter with period = 0x2DC6C0 (one time per second)
-    TIMER32_1->LOAD = 0x2DC6C0;
+    // Load Timer32 counter with period = 0x2DC6C0 (four times per second)
+    //                           period = 0xB71B00 (one time per second)
+    TIMER32_1->LOAD = 0xB71B00;
 
     // Enable the Timer32 interrupt in NVIC
     NVIC->ISER[0] = 1 << ((T32_INT1_IRQn) & 31);
@@ -58,21 +59,22 @@ void main(void)
             TIMER32_CONTROL_IE;
 
     vInitUSCI();                            // Calls USCI Initialization routine
-    vSendStringUSART("USART initialized...\r\n");
+    vInitDebugUSCI();                       // Calls USCI Initialization routine
+    vSendStringDebugUSART("USART initialized...\r\n");
 
     vInitADC();                             // Calls ADC Initialization routine
-    vSendStringUSART("ADC initialized...\r\n");
+    vSendStringDebugUSART("ADC initialized...\r\n");
 
     vInitEUSCI();                           // Calls eUSCI Initialization routine
-    vSendStringUSART("I2C initialized...\r\n");
+    vSendStringDebugUSART("I2C initialized...\r\n");
 
     // Enable global interrupt
     __enable_irq();
 
     if(iInitMPU6050() == ERROR)
-        vSendStringUSART("Error initializing MPU6050\r\n");
+        vSendStringDebugUSART("Error initializing MPU6050\r\n");
     else
-        vSendStringUSART("MPU6050 initialized...\r\n");
+        vSendStringDebugUSART("MPU6050 initialized...\r\n");
 
     // Labels
     vSendStringUSART("Time, Temp, AX, AY, AZ, GX, GY, GZ\r\n");
@@ -89,7 +91,7 @@ void main(void)
             vSendStringUSART(cData);
 
     //        vStartADC();
-
+            vSendStringDebugUSART("Reading MPU6050\r\n");
             if (iReadBytesI2C(MPU6050_ACCEL_XOUT_H, 14) != ERROR)
             {
                 fTmp = (iData[6]<<8) + iData[7];    // Temperature
@@ -142,7 +144,7 @@ void main(void)
                 vSendStringUSART("\r\n");
             }
             else
-                vSendStringUSART("Error reading MPU6050\r\n");
+                vSendStringDebugUSART("Error reading MPU6050\r\n");
         }
     }
 }

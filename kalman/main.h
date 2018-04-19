@@ -17,6 +17,7 @@
 #include "ftoa.h"
 #include "eusci.h"
 #include "usci.h"
+#include "pwm.h"
 #include "adc.h"
 
 #define TRUE    1

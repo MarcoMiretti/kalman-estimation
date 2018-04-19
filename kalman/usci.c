@@ -18,13 +18,20 @@ void vInitDebugUSCI(void)
     EUSCI_A0->CTLW0 |= EUSCI_A_CTLW0_SWRST; // Put eUSCI in reset
     EUSCI_A0->CTLW0 = EUSCI_A_CTLW0_SWRST | // Remain eUSCI in reset
             EUSCI_B_CTLW0_SSEL__SMCLK;      // Configure eUSCI clock source for SMCLK
-    // Baud Rate calculation
-    // 12000000/(16*9600) = 78.125
-    // Fractional portion = 0.125
-    // User's Guide Table 21-4: UCBRSx = 0x10
-    // UCBRFx = int ( (78.125-78)*16) = 2
-    EUSCI_A0->BRW = 78;                     // 12000000/16/9600
-    EUSCI_A0->MCTLW = (2 << EUSCI_A_MCTLW_BRF_OFS) |
+    // Baud Rate calculation (57600)
+    // 12000000/(16*57600) = 13.0208333
+    // Fractional portion = 0.0208333
+    // User's Guide Table 21-4: UCBRSx = 0x00
+    //EUSCI_A0->BRW = 13;
+    //EUSCI_A0->MCTLW = (0 << EUSCI_A_MCTLW_BRF_OFS) |
+    //        EUSCI_A_MCTLW_OS16;
+
+    // Baud Rate calculation (115200)
+    // 12000000/(16*115200) = 6.51041
+    // Fractional portion = 0.51041
+    // User's Guide Table 21-4: UCBRSx = 0x08
+    EUSCI_A0->BRW = 6;
+    EUSCI_A0->MCTLW = (8 << EUSCI_A_MCTLW_BRF_OFS) |
             EUSCI_A_MCTLW_OS16;
 
     EUSCI_A0->CTLW0 &= ~EUSCI_A_CTLW0_SWRST;// Initialize eUSCI
